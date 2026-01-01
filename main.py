@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 
 from prompts import system_prompt
-from call_function import available_functions
+from call_function import available_functions, call_function
 
 
 def main():
@@ -47,8 +47,25 @@ def main():
     if not function_calls:
         print(f"Response: {response_text}")
     else:
+        list_of_function_results = []
         for function in function_calls:
-            print(f"Calling function: {function.name}({function.args})")
+            # print(f"Calling function: {function.name}({function.args})")
+            function_call_result = call_function(function, verbose=args.verbose)
+
+
+            if function_call_result.parts == []:
+                raise Exception("The types.Content object returned from call_function should have a non-empty .parts list.")
+
+            elif function_call_result.parts[0].function_response == None:
+                raise Exception("We want to look at the .function_response property of the first item in the list of parts, i.e. .parts[0].function_response. It should be a FunctionResponse object. It's somehow None, so an exception has been raised.")
+
+            elif function_call_result.parts[0].function_response.response == None:
+                raise Exception("we need to check the .response field of the FunctionResponse object, i.e. .parts[0].function_response.response. This is where the actual function result will be. It's None, so we have raised an exception.")
+
+            else:
+                list_of_function_results.append(function_call_result.parts[0])
+                if args.verbose:
+                    print(f"-> {function_call_result.parts[0].function_response.response}")
 
 
 if __name__ == "__main__":
