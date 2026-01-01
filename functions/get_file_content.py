@@ -6,7 +6,7 @@ from config import MAX_CHARS
 
 schema_get_file_content = types.FunctionDeclaration(
     name="get_file_content",
-    description=f"Provides contents of a file in a specified location relative to the working directory, providing the first {MAX_CHARS} charachters of content as a string",
+    description=f"Provides contents of a file in a specified location relative to the working directory, providing the first {MAX_CHARS} characters of content as a string",
     parameters=types.Schema(
         type=types.Type.OBJECT,
         properties={
@@ -34,10 +34,8 @@ def get_file_content(working_directory, file_path):
             return f'Error: File not found or is not a regular file: "{file_path}"'
 
         # Read the file and return its contents as a string
-        ("Result for get_file_content('calculator', 'pkg/calculator.py')")
         content = f"Result for '{file_path}':"
         with open(target_file_abs, 'r') as f:
-            print(f"MAX_CHARS is {MAX_CHARS}")
             content += f.read(MAX_CHARS)
 
             # After reading the first MAX_CHARS...

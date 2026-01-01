@@ -15,14 +15,12 @@ available_functions = types.Tool(
 )
 
 def call_function(function_call, verbose=False):
-    # function_call.name
-    # function_call.args
     if verbose:
         print(f"Calling function: {function_call.name}({function_call.args})")
     else:
         print(f" - Calling function: {function_call.name}")
     
-    function_map ={
+    function_map = {
         "get_files_info": get_files_info,
         "get_file_content": get_file_content,
         "run_python_file": run_python_file,

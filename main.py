@@ -37,8 +37,8 @@ def main():
     prompt_tokens = response.usage_metadata.prompt_token_count if response.usage_metadata else 0
     response_tokens = response.usage_metadata.candidates_token_count if response.usage_metadata else 0
     response_text = response.text or "No response"
-    function_calls = response.function_calls #  Note that function_calls is not guaranteed to be a list – its value will be None when it's empty.
-        
+    function_calls = response.function_calls  # Can be None when empty
+
     if args.verbose:
         print(f"User prompt: {args.user_prompt}")
         print(f"Prompt tokens: {prompt_tokens}")
@@ -48,20 +48,15 @@ def main():
         print(f"Response: {response_text}")
     else:
         list_of_function_results = []
-        for function in function_calls:
-            # print(f"Calling function: {function.name}({function.args})")
-            function_call_result = call_function(function, verbose=args.verbose)
-
+        for func_call in function_calls:
+            function_call_result = call_function(func_call, verbose=args.verbose)
 
             if function_call_result.parts == []:
-                raise Exception("The types.Content object returned from call_function should have a non-empty .parts list.")
-
-            elif function_call_result.parts[0].function_response == None:
-                raise Exception("We want to look at the .function_response property of the first item in the list of parts, i.e. .parts[0].function_response. It should be a FunctionResponse object. It's somehow None, so an exception has been raised.")
-
-            elif function_call_result.parts[0].function_response.response == None:
-                raise Exception("we need to check the .response field of the FunctionResponse object, i.e. .parts[0].function_response.response. This is where the actual function result will be. It's None, so we have raised an exception.")
-
+                raise Exception("Empty parts list from call_function")
+            elif function_call_result.parts[0].function_response is None:
+                raise Exception("Missing function_response in parts[0]")
+            elif function_call_result.parts[0].function_response.response is None:
+                raise Exception("Missing response in function_response")
             else:
                 list_of_function_results.append(function_call_result.parts[0])
                 if args.verbose:

@@ -24,7 +24,6 @@ schema_run_python_file = types.FunctionDeclaration(
 )
 
 def run_python_file(working_directory, file_path, args=None):
-
     try:
         working_dir_abs = os.path.abspath(working_directory)
         target_file_abs = os.path.normpath(os.path.join(working_dir_abs, file_path))
@@ -39,21 +38,20 @@ def run_python_file(working_directory, file_path, args=None):
             return f'Error: "{file_path}" does not exist or is not a regular file'
 
         # Check if the target file is actually a python script
-        if file_path[-3:] != ".py":
+        if not file_path.endswith(".py"):
             return f'Error: "{file_path}" is not a Python file'
-
 
         # Run python file as a subprocess
         command = ["python", target_file_abs]
         if args:
             command.extend(args)
-        process = subprocess.run(command,capture_output=True, timeout=30 ,text=True)
+        process = subprocess.run(command, capture_output=True, timeout=30, text=True)
 
         # Capture information related to the subprocess
         capture = ""
         if process.returncode != 0:
             capture += f"Process exited with code {process.returncode}"
-        if (process.stdout == None) and (process.stderr == None):
+        if (process.stdout is None) and (process.stderr is None):
             capture += "No output produced"
         else:
             capture += f"STDOUT: {process.stdout}"
