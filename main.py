@@ -1,5 +1,6 @@
 import os
 import argparse
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -7,6 +8,7 @@ from google.genai import types
 
 from prompts import system_prompt
 from call_function import available_functions, call_function
+from config import MAX_ITERATIONS
 
 
 def main():
@@ -25,43 +27,57 @@ def main():
 
     messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions],
-            system_instruction=system_prompt
-        ),
-    )
+    for _ in range(MAX_ITERATIONS):
+        # call the model, handle responses, etc.
 
-    prompt_tokens = response.usage_metadata.prompt_token_count if response.usage_metadata else 0
-    response_tokens = response.usage_metadata.candidates_token_count if response.usage_metadata else 0
-    response_text = response.text or "No response"
-    function_calls = response.function_calls  # Can be None when empty
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[available_functions],
+                system_instruction=system_prompt
+            ),
+        )
 
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {prompt_tokens}")
-        print(f"Response tokens: {response_tokens}")
+        prompt_tokens = response.usage_metadata.prompt_token_count if response.usage_metadata else 0
+        response_tokens = response.usage_metadata.candidates_token_count if response.usage_metadata else 0
+        response_text = response.text or "No response"
+        function_calls = response.function_calls  # Can be None when empty
 
-    if not function_calls:
-        print(f"Response: {response_text}")
+        if not response.candidates:
+            raise Exception("Missing candidates in response")
+        else:
+            for candidate in response.candidates:
+                messages.append(candidate.content)
+
+        if args.verbose:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {prompt_tokens}")
+            print(f"Response tokens: {response_tokens}")
+        if not function_calls:
+            print(f"Response: {response_text}")
+            break
+        else:
+            list_of_function_results = []
+            for func_call in function_calls:
+                function_call_result = call_function(func_call, verbose=args.verbose)
+
+                if function_call_result.parts == []:
+                    raise Exception("Empty parts list from call_function")
+                elif function_call_result.parts[0].function_response is None:
+                    raise Exception("Missing function_response in parts[0]")
+                elif function_call_result.parts[0].function_response.response is None:
+                    raise Exception("Missing response in function_response")
+                else:
+                    list_of_function_results.append(function_call_result.parts[0])
+                    if args.verbose:
+                        print(f"-> {function_call_result.parts[0].function_response.response}")
+            
+            messages.append(types.Content(role="user", parts=list_of_function_results))
+
     else:
-        list_of_function_results = []
-        for func_call in function_calls:
-            function_call_result = call_function(func_call, verbose=args.verbose)
-
-            if function_call_result.parts == []:
-                raise Exception("Empty parts list from call_function")
-            elif function_call_result.parts[0].function_response is None:
-                raise Exception("Missing function_response in parts[0]")
-            elif function_call_result.parts[0].function_response.response is None:
-                raise Exception("Missing response in function_response")
-            else:
-                list_of_function_results.append(function_call_result.parts[0])
-                if args.verbose:
-                    print(f"-> {function_call_result.parts[0].function_response.response}")
-
+        print(f"Maximum iterations of agent turns reached ({MAX_ITERATIONS}) without producing a final response")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
